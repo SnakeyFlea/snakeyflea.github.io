@@ -1,1 +1,1977 @@
-# snakeyflea.github.io
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clash-Style Arena Battle</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* NEW: Blue gradient background */
+            background-color: #0c4a6e;
+            background-image: radial-gradient(circle, #1e40af 0%, #082f49 70%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: white;
+            overflow: hidden; /* Prevent scrolling */
+        }
+        .screen {
+            display: none; /* All screens hidden by default */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            /* NEW: Add padding for top/bottom bars */
+            padding-top: 80px;
+            padding-bottom: 80px;
+        }
+        #mainMenu {
+            display: flex; /* Show main menu by default */
+            gap: 2rem;
+            justify-content: center; /* Center placeholder */
+        }
+        #deckBuilderScreen {
+            padding: 1rem;
+            width: 100%;
+            max-width: 1000px;
+            justify-content: flex-start; /* Align content to the top */
+            padding-top: 2rem;
+            height: 100%;
+            /* Add top/bottom padding for bars */
+            padding-top: 80px;
+            padding-bottom: 80px;
+        }
+        #gameScreen {
+            padding: 1rem; /* Reset padding for game screen */
+            width: 100%;
+            max-width: 1000px; /* Limit max size */
+            height: 100%;
+        }
+        canvas {
+            background-color: #f0f0f0;
+            cursor: pointer;
+            border-radius: 10px;
+            /* Wooden border */
+            border-top: 10px solid #a35d1a;
+            border-bottom: 10px solid #a35d1a;
+            /* Side borders to look like posts */
+            border-left: 20px solid #854d0e; 
+            border-right: 20px solid #854d0e;
+            display: block; /* Added for better layout */
+            width: 100%; /* Canvas will fill its container */
+            height: 100%; /* Canvas will fill its container */
+        }
+        .game-font {
+            font-family: 'Luckiest Guy', cursive;
+        }
+        .text-shadow-heavy {
+            text-shadow: 4px 4px 0 rgb(0 0 0 / 60%);
+        }
+        .text-shadow-light {
+            text-shadow: 2px 2px 0 rgb(0 0 0 / 60%);
+        }
+        /* Card styles */
+        .card {
+            transition: all 0.2s ease-in-out;
+            border: 4px solid #fff;
+            user-select: none;
+            /* Ensure the card itself is a flex container for its internal structure */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Align content to top */
+            padding: 2px; /* Reduced padding to fit more content */
+            position: relative; /* For absolute positioning of elixir cost */
+            background-color: #4b5563; /* Card background color */
+        }
+        .card.selected {
+            transform: translateY(-15px) scale(1.05);
+            border-color: #fcd34d; /* Gold */
+            box-shadow: 0 10px 20px rgba(252, 211, 77, 0.4);
+        }
+        .card.disabled {
+            filter: grayscale(100%);
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        /* Card image container */
+        .card-image-container {
+            width: 100%; /* Take full width of card */
+            height: 70%; /* Allocate specific height for image */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden; /* Hide overflowing parts of image if any */
+        }
+        .card-image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* Ensure image fits without cropping */
+        }
+        /* Card text styles */
+        .card-text-container {
+            width: 100%;
+            text-align: center;
+            line-height: 1; /* Tighter line height for text */
+            padding-bottom: 2px; /* Small padding at the bottom */
+            height: 30%; /* Give text a fixed height */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .card-name {
+            font-weight: bold;
+            font-family: 'Luckiest Guy', cursive;
+            font-size: 0.8rem; /* Smaller font for name */
+            white-space: nowrap; /* Prevent name from wrapping */
+            overflow: hidden;
+            text-overflow: ellipsis; /* Add ellipsis if name is too long */
+        }
+        .card-type {
+            font-size: 0.6rem; /* Even smaller font for type */
+            color: #ccc;
+        }
+
+        /* NEW: Segmented Elixir Bar */
+        #elixirBar {
+            display: flex;
+            width: 400px;
+            height: 25px; /* Thinner bar */
+            background-color: #4a2c5a; /* Dark purple */
+            border-radius: 20px;
+            border: 3px solid #f0d9ff;
+            overflow: hidden;
+            padding: 2px;
+            gap: 2px; /* Spacing between segments */
+        }
+        .elixir-segment {
+            width: 10%; /* 10 segments */
+            height: 100%;
+            background-color: #2c1a35; /* Empty segment color */
+            border-radius: 3px;
+            transition: background-color 0.1s linear;
+        }
+        .elixir-segment.filled {
+            background-color: #d633ff; /* Filled segment color */
+        }
+
+        #nextCardSlot {
+            width: 70px;
+            height: 90px;
+            /* background-color: rgba(0,0,0,0.3); */ /* Removed background */
+            /* border: 2px dashed #fcd34d; */ /* Removed border */
+            border: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+        }
+        #nextCardSlot .card {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            /* NEW: Remove card background/border for in-game */
+            background-color: transparent;
+            border: none;
+        }
+        /* Specific styling for cards within nextCardSlot */
+        #nextCardSlot .card .card-image-container {
+            height: 100%;
+        }
+
+        .menu-button {
+            @apply px-10 py-5 bg-yellow-500 text-gray-900 game-font text-4xl rounded-lg shadow-lg hover:bg-yellow-400 transition transform hover:scale-105;
+        }
+        .card-collection-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); /* Smaller cards */
+            gap: 0.75rem;
+            flex-grow: 1; /* Make collection fill remaining space */
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            max-height: 45vh; /* Adjusted height */
+        }
+
+        /* NEW: Top UI Container */
+        #topUiContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        #gameTimer {
+            font-size: 3rem;
+            color: white;
+        }
+        #doubleElixirBadge {
+            width: 60px;
+            height: 60px;
+            background-color: #7e22ce; /* Purple */
+            border-radius: 50%;
+            display: none; /* Hide by default */
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            border: 4px solid #a855f7;
+            box-shadow: 0 0 15px #a855f7;
+        }
+
+        #gameMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4rem;
+            color: #fcd34d;
+            z-index: 10;
+            display: none;
+            pointer-events: none;
+        }
+        #playerHandContainer {
+            gap: 0.5rem;
+            padding: 0.75rem;
+            /* NEW: Removed background and border */
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+        }
+        
+        /* NEW: Style for in-game hand cards */
+        #playerHandContainer .card {
+            background-color: transparent;
+            border: none;
+        }
+
+
+        /* NEW: Top Info Bar */
+        #topInfoBar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background-color: #0c4a6e; /* Darker blue */
+            border-bottom: 4px solid #1d4ed8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1rem;
+            z-index: 100;
+        }
+        .info-badge {
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 0.25rem 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* NEW: Main Menu Bottom Bar */
+        #bottomBar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            background-color: #0c4a6e; /* Darker blue */
+            border-top: 4px solid #1d4ed8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            padding: 0 1rem;
+            z-index: 100;
+        }
+        .bottom-bar-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-family: 'Luckiest Guy', cursive;
+            text-transform: uppercase;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        .bottom-bar-button:hover {
+            color: #e2e8f0;
+            transform: scale(1.1);
+        }
+        .bottom-bar-button.active {
+            color: #fcd34d;
+        }
+        .bottom-bar-button .icon {
+            font-size: 2rem;
+        }
+        #battleButton {
+            /* Large yellow battle button */
+            background-image: linear-gradient(to bottom, #fde047, #f59e0b);
+            border: 4px solid #ca8a04;
+            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            color: #422006; /* Dark brown text */
+            font-size: 1.5rem;
+            text-shadow: 1px 1px 0 #fef08a;
+            box-shadow: 0 4px 0 #ca8a04;
+            /* Removed transform, container will handle positioning */
+        }
+        #battleButton:hover {
+            background-image: linear-gradient(to bottom, #fef08a, #facc15);
+        }
+        #battleButton:active {
+            transform: translateY(2px); /* Adjust active state */
+            box-shadow: 0 2px 0 #ca8a04;
+        }
+
+        /* NEW: Styles for the Arena Image on Main Menu */
+        #mainMenuArenaImage {
+            max-width: 80%; /* Increased size */
+            height: auto;
+            border: none; /* Removed border */
+            box-shadow: none; /* Removed shadow */
+            object-fit: contain; /* Ensure it fits without cropping */
+            position: absolute; /* Position absolutely to center it */
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Center horizontally and vertically */
+            /* Add a subtle drop shadow to make it pop */
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5)); 
+        }
+
+        /* NEW: Gemini Tips Container */
+        #geminiTipsContainer {
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 2px solid #fcd34d;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            width: 100%;
+            max-width: 600px;
+            display: none; /* Hidden by default */
+            color: #f0f9ff;
+            font-size: 0.9rem;
+        }
+        #geminiTipsContainer h3 {
+            font-family: 'Luckiest Guy', cursive;
+            color: #fcd34d;
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- NEW: Top Info Bar -->
+    <div id="topInfoBar" style="display: none;">
+        <!-- Left Side: Player Info -->
+        <div class="flex items-center gap-3">
+            <div class="info-badge game-font text-xl">
+                <span class="text-blue-300">👑</span> 1
+            </div>
+            <div class="flex flex-col items-start">
+                <span class="game-font text-2xl text-white">Player</span>
+                <span class="info-badge text-sm !p-1">🏆 0</span>
+            </div>
+        </div>
+        <!-- Right Side: Currencies -->
+        <div class="flex items-center gap-3">
+            <div class="info-badge game-font text-lg">
+                🪙 1000
+            </div>
+            <div class="info-badge game-font text-lg">
+                💎 50
+            </div>
+        </div>
+    </div>
+    
+
+<div id="mainMenu" class="screen">
+        
+        <img src="https://www.deckshop.pro/img/arena/arena_goblin.png" alt="Goblin Arena" id="mainMenuArenaImage">
+        
+</div>
+
+    
+
+<div id="deckBuilderScreen" class="screen">
+        
+        
+
+<div class="grid grid-cols-4 gap-4 p-4 bg-gray-900 border-4 border-yellow-900 rounded-lg shadow-inner mb-4">
+            <div id="deckSlot1" class="card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500">Slot 1</div>
+            <div id="deckSlot2" class="card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500">Slot 2</div>
+            <div id="deckSlot3" class="card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500">Slot 3</div>
+            <div id="deckSlot4" class="card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500">Slot 4</div>
+            <div id="deckSlot5" class="card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500">Slot 5</div>
+            <div id="deckSlot6" class="card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500">Slot 6</div>
+            <div id="deckSlot7" class="card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500">Slot 7</div>
+            <div id="deckSlot8" class="card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500">Slot 8</div>
+        </div>
+
+        <!-- NEW: Gemini Analyze Button -->
+        <button id="analyzeDeckButton" class="px-6 py-3 bg-purple-600 text-white game-font text-xl rounded-lg shadow-lg hover:bg-purple-500 transition transform hover:scale-105 mb-4">
+            Ask Gemini for Deck Tips
+        </button>
+
+        <!-- NEW: Gemini Tips Container -->
+        <div id="geminiTipsContainer">
+            <h3>Gemini Deck Analysis</h3>
+            <p id="geminiTipsContent">Select 8 cards and click the button above for AI-powered tips!</p>
+        </div>
+
+        
+
+<div class="w-full max-w-2xl bg-gray-800 p-2 rounded-t-lg mt-4">
+            <h2 class="text-2xl game-font text-white text-center">Card Collection</h2>
+        </div>
+        
+        
+
+<div id="cardCollection" class="card-collection-grid w-full max-w-2xl mb-6">
+            
+
+</div>
+
+        
+
+<button id="saveDeckButton" class="menu-button text-3xl hidden">Save & Exit</button>
+    </div>
+
+    
+
+<div id="gameScreen" class="screen">
+        
+        <div id="topUiContainer">
+            <div id="gameTimer" class="game-font text-shadow-heavy">3:00</div>
+            <div id="doubleElixirBadge" class="game-font text-shadow-light">x2</div>
+        </div>
+
+        
+
+<div id="gameContainer" class="relative w-full flex-grow">
+            <canvas id="gameCanvas"></canvas>
+            
+            
+
+<div id="gameMessage" class="game-font text-shadow-heavy"></div>
+
+            
+
+<div id="gameOverModal" class="absolute inset-0 bg-black bg-opacity-75 flex-col items-center justify-center rounded-lg hidden">
+                <h2 id="gameOverText" class="text-6xl game-font text-white mb-8 text-shadow-heavy"></h2>
+                <button id="restartButton" class="menu-button">Main Menu</button>
+            </div>
+        </div>
+
+        
+
+<div class="mt-4 flex flex-col items-center gap-2 w-full max-w-lg"> 
+
+            
+
+<div class="flex items-end gap-4">
+                <div class="flex flex-col items-center">
+                    <div class="text-sm game-font text-yellow-300">Next:</div>
+                    <div id="nextCardSlot" title="Next Card">
+                        
+
+</div>
+                </div>
+                <div id="playerHandContainer" class="flex">
+                    
+
+</div>
+            </div>
+            
+            
+
+<div id="elixirBar">
+                
+
+</div>
+
+            <p class="text-sm text-yellow-200">Click a card, then click on the arena to deploy!</p>
+        </div>
+    </div>
+
+    
+
+<div id="mainMenuBattleButtonContainer" class="fixed bottom-20 left-0 w-full flex justify-center z-50" style="display: none;">
+        <button id="battleButton" class="game-font">
+            ⚔️ Battle
+        </button>
+    </div>
+
+    
+
+<div id="bottomBar">
+        <button class="bottom-bar-button active" id="mainMenuTab">
+            <span class="icon">⚔️</span>
+            <span>Battle</span>
+        </button>
+        <button class="bottom-bar-button" id="deckBuilderTab">
+            <span class="icon">🃏</span>
+            <span>Cards</span>
+        </button>
+    </div>
+
+
+    <script>
+        // --- Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameContainer = document.getElementById('gameContainer');
+        const elixirBar = document.getElementById('elixirBar'); // NEW: Get the bar container
+        const playerHandContainer = document.getElementById('playerHandContainer');
+        const nextCardSlot = document.getElementById('nextCardSlot');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const gameOverText = document.getElementById('gameOverText');
+        const restartButton = document.getElementById('restartButton');
+        const mainMenu = document.getElementById('mainMenu');
+        const gameScreen = document.getElementById('gameScreen');
+        const gameTimerDisplay = document.getElementById('gameTimer');
+        const gameMessage = document.getElementById('gameMessage');
+        const doubleElixirBadge = document.getElementById('doubleElixirBadge');
+
+        // NEW: Top Info Bar
+        const topInfoBar = document.getElementById('topInfoBar');
+
+        // NEW: Bottom Bar Buttons
+        const bottomBar = document.getElementById('bottomBar');
+        const mainMenuTab = document.getElementById('mainMenuTab');
+        const deckBuilderTab = document.getElementById('deckBuilderTab');
+        const deckBuilderScreen = document.getElementById('deckBuilderScreen');
+        // NEW: Battle button container
+        const battleButtonContainer = document.getElementById('mainMenuBattleButtonContainer');
+        const battleButton = document.getElementById('battleButton');
+
+        // NEW: Gemini UI Elements
+        const analyzeDeckButton = document.getElementById('analyzeDeckButton');
+        const geminiTipsContainer = document.getElementById('geminiTipsContainer');
+        const geminiTipsContent = document.getElementById('geminiTipsContent');
+
+        // --- Game State ---
+        let elixir = 5;
+        let aiElixir = 5; // <-- AI now has its own elixir
+        const maxElixir = 10;
+        let elixirTimer = 0;
+        const elixirRate = 1.5; // seconds per elixir
+        let currentElixirRate = elixirRate;
+        let isDoubleElixir = false;
+
+        const gameDuration = 180; // 3 minutes
+        let gameTimer = gameDuration;
+        let gameTime = 0; // <-- ADDED THIS MISSING VARIABLE
+
+        let aiSpawnTimer = 0;
+        const aiSpawnRate = 8; // seconds (Was 5, increased to 8 to reduce difficulty)
+        let gameOver = false;
+        let gameLoopId;
+
+        let selectedCard = null; // Will store card object
+        let fullPlayerDeck = ['knight', 'archer', 'giant', 'fireball', 'skeletons', 'goblins', 'musketeer', 'minipekka']; // Default 8-card deck
+        let playerHand = [];
+        let drawPile = [];
+        
+        let towers = [];
+        let units = [];
+        let projectiles = [];
+        let effects = []; // For explosions, etc.
+        let spawners = []; // For buildings like Goblin Hut
+
+        // --- Game Constants ---
+        const BASE_CANVAS_WIDTH = 500;
+        const BASE_CANVAS_HEIGHT = 700;
+        const TILE_SIZE = 50; 
+        const LANE_LEFT_X = BASE_CANVAS_WIDTH * 0.25;
+        const LANE_RIGHT_X = BASE_CANVAS_WIDTH * 0.75;
+        const BRIDGE_Y = BASE_CANVAS_HEIGHT * 0.5;
+
+        const TEAM_PLAYER = 'player';
+        const TEAM_AI = 'ai';
+
+        const TARGET_ANY = 'any';
+        const TARGET_GROUND = 'ground';
+        const TARGET_BUILDING = 'building';
+
+        // --- Card Database ---
+        const masterCardList = {
+            knight: {
+                id: 'knight',
+                name: 'Knight',
+                cost: 3,
+                type: 'unit',
+                emoji: '⚔️',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/knight.png',
+                stats: { hp: 600, speed: 60, range: 25, attackSpeed: 1, damage: 70, targetType: TARGET_GROUND, movementType: 'ground' }
+            },
+            archer: {
+                id: 'archer',
+                name: 'Archers', // Corrected name
+                cost: 3, // Corrected cost
+                type: 'unit',
+                emoji: '🏹',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/archers.png',
+                stats: { hp: 250, speed: 60, range: 120, attackSpeed: 0.8, damage: 40, targetType: TARGET_ANY, movementType: 'ground' }
+            },
+            giant: {
+                id: 'giant',
+                name: 'Giant',
+                cost: 5,
+                type: 'unit',
+                emoji: '🗿',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/giant.png',
+                stats: { hp: 1500, speed: 40, range: 25, attackSpeed: 1.5, damage: 100, targetType: TARGET_BUILDING, movementType: 'ground' }
+            },
+            fireball: {
+                id: 'fireball',
+                name: 'Fireball',
+                cost: 4,
+                type: 'spell',
+                emoji: '🔥',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/fireball.png',
+                stats: { damage: 250, radius: 70, duration: 0.5 }
+            },
+            skeletons: {
+                id: 'skeletons',
+                name: 'Skeletons',
+                cost: 1,
+                type: 'unit',
+                emoji: '💀',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/skeletons.png',
+                stats: { hp: 50, speed: 80, range: 25, attackSpeed: 1, damage: 30, targetType: TARGET_GROUND, movementType: 'ground' }
+            },
+            goblins: {
+                id: 'goblins',
+                name: 'Goblins',
+                cost: 2,
+                type: 'unit',
+                emoji: '👺',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/goblins.png',
+                stats: { hp: 150, speed: 90, range: 25, attackSpeed: 1.1, damage: 50, targetType: TARGET_GROUND, movementType: 'ground' }
+            },
+            musketeer: {
+                id: 'musketeer',
+                name: 'Musketeer',
+                cost: 4,
+                type: 'unit',
+                emoji: '🎯',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/musketeer.png',
+                stats: { hp: 500, speed: 60, range: 140, attackSpeed: 1.1, damage: 100, targetType: TARGET_ANY, movementType: 'ground' }
+            },
+            minipekka: {
+                id: 'minipekka',
+                name: 'Mini P.E.K.K.A',
+                cost: 4,
+                type: 'unit',
+                emoji: '🤖',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/mini-pekka.png',
+                stats: { hp: 900, speed: 70, range: 25, attackSpeed: 1.8, damage: 300, targetType: TARGET_GROUND, movementType: 'ground' }
+            },
+            babydragon: {
+                id: 'babydragon',
+                name: 'Baby Dragon',
+                cost: 4,
+                type: 'unit',
+                emoji: '🐲',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/baby-dragon.png',
+                stats: { hp: 800, speed: 60, range: 100, attackSpeed: 1.5, damage: 80, targetType: TARGET_ANY, movementType: 'air' } // This is now an AIR unit
+            },
+            goblinHut: {
+                id: 'goblinHut',
+                name: 'Goblin Hut',
+                cost: 5,
+                type: 'spawner',
+                emoji: '🏠',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/goblin-hut.png',
+                stats: { hp: 700, lifetime: 40, spawnRate: 5, unitToSpawn: 'goblins', movementType: 'ground' }
+            },
+            hogRider: {
+                id: 'hogRider',
+                name: 'Hog Rider',
+                cost: 4,
+                type: 'unit',
+                emoji: '🐗',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/hog-rider.png',
+                stats: { hp: 800, speed: 100, range: 25, attackSpeed: 1.5, damage: 150, targetType: TARGET_BUILDING, movementType: 'ground' }
+            },
+            arrows: {
+                id: 'arrows',
+                name: 'Arrows',
+                cost: 3,
+                type: 'spell',
+                emoji: '✨',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/arrows.png',
+                stats: { damage: 100, radius: 120, duration: 0.2 }
+            },
+            valkyrie: {
+                id: 'valkyrie',
+                name: 'Valkyrie',
+                cost: 4,
+                type: 'unit',
+                emoji: '💃',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/valkyrie.png',
+                stats: { hp: 800, speed: 60, range: 25, attackSpeed: 1.5, damage: 120, targetType: TARGET_GROUND, movementType: 'ground', splashRadius: 40 }
+            },
+            // --- NEW CARDS ---
+            pekka: {
+                id: 'pekka',
+                name: 'P.E.K.K.A',
+                cost: 7,
+                type: 'unit',
+                emoji: '🦾',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/pekka.png',
+                stats: { hp: 2000, speed: 40, range: 25, attackSpeed: 1.8, damage: 500, targetType: TARGET_GROUND, movementType: 'ground' }
+            },
+            wizard: {
+                id: 'wizard',
+                name: 'Wizard',
+                cost: 5,
+                type: 'unit',
+                emoji: '🧙',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/wizard.png',
+                stats: { hp: 450, speed: 60, range: 130, attackSpeed: 1.4, damage: 130, targetType: TARGET_ANY, movementType: 'ground', splashRadius: 30 }
+            },
+            minions: {
+                id: 'minions',
+                name: 'Minions',
+                cost: 3,
+                type: 'unit',
+                emoji: '🦇',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/minions.png',
+                stats: { hp: 150, speed: 80, range: 100, attackSpeed: 1, damage: 50, targetType: TARGET_ANY, movementType: 'air' }
+            },
+            zap: {
+                id: 'zap',
+                name: 'Zap',
+                cost: 2,
+                type: 'spell',
+                emoji: '⚡',
+                imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/zap.png',
+                stats: { damage: 80, radius: 60, duration: 0.1, stunDuration: 0.5 } // NEW: Stun Duration
+            }
+        };
+
+        // --- Utility Functions ---
+        function getDistance(x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        // --- Screen Management ---
+        function showScreen(screenId) {
+            ['mainMenu', 'gameScreen', 'deckBuilderScreen'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            document.getElementById(screenId).style.display = 'flex';
+
+            // Update bottom bar active state
+            if (screenId === 'mainMenu') {
+                mainMenuTab.classList.add('active');
+                deckBuilderTab.classList.remove('active');
+                battleButtonContainer.style.display = 'flex'; // Show battle button
+            } else if (screenId === 'deckBuilderScreen') {
+                mainMenuTab.classList.remove('active');
+                deckBuilderTab.classList.add('active');
+                battleButtonContainer.style.display = 'none'; // Hide battle button
+                // Reset Gemini tips on screen load
+                geminiTipsContainer.style.display = 'none';
+                geminiTipsContent.textContent = 'Select 8 cards and click the button above for AI-powered tips!';
+            } else if (screenId === 'gameScreen') {
+                battleButtonContainer.style.display = 'none'; // Hide battle button
+            }
+            
+            // Show/hide top and bottom bars
+            if(screenId === 'gameScreen') {
+                bottomBar.style.display = 'none';
+                topInfoBar.style.display = 'none'; // NEW
+            } else {
+                bottomBar.style.display = 'flex';
+                topInfoBar.style.display = 'flex'; // NEW
+            }
+        }
+
+        // --- Game Classes ---
+        class Entity {
+            // ... (Same as before)
+            constructor(x, y, team, hp, width, height) {
+                this.x = x;
+                this.y = y;
+                this.team = team;
+                this.maxHp = hp;
+                this.hp = hp;
+                this.width = width;
+                this.height = height;
+                this.isAlive = true;
+                // NEW: Stun mechanics
+                this.isStunned = false;
+                this.stunTimer = 0;
+            }
+            
+            // NEW: Apply Stun
+            applyStun(duration) {
+                this.isStunned = true;
+                this.stunTimer = Math.max(this.stunTimer, duration); // Apply the longest stun
+                this.attackCooldown = Math.max(this.attackCooldown, duration); // Reset attack
+            }
+
+            drawHpBar() {
+                if (!this.isAlive) return;
+                const barWidth = 40;
+                const barHeight = 5;
+                const barX = this.x - barWidth / 2;
+                const barY = this.y - this.height / 2 - 10;
+                
+                ctx.fillStyle = '#dc2626';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                
+                const hpPercent = this.hp / this.maxHp;
+                ctx.fillStyle = '#22c55e';
+                ctx.fillRect(barX, barY, barWidth * hpPercent, barHeight);
+
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+            }
+
+            takeDamage(amount) {
+                this.hp -= amount;
+                if (this.hp <= 0) {
+                    this.hp = 0;
+                    this.isAlive = false;
+                    if (this.isKing) {
+                        endGame(this.team === TEAM_AI ? TEAM_PLAYER : TEAM_AI);
+                    }
+                }
+            }
+        }
+
+        class Tower extends Entity {
+            // ... (Same as before, with graphics update)
+            constructor(x, y, team, isKing = false) {
+                const size = isKing ? 50 : 40;
+                const hp = isKing ? 2500 : 1400;
+                super(x, y, team, hp, size, size);
+                this.isKing = isKing;
+                this.range = 150;
+                this.attackSpeed = 1;
+                this.attackCooldown = 0;
+                this.damage = 60;
+                this.target = null;
+            }
+
+            findTarget() {
+                if (this.target && this.target.isAlive && getDistance(this.x, this.y, this.target.x, this.target.y) <= this.range) {
+                    return;
+                }
+                this.target = null;
+                let closestDist = this.range;
+
+                for (const unit of units) {
+                    // *** ADDED CHECK: Cannot target air if tower can't hit air ***
+                    // (Assuming all towers can hit air for now, but this is where logic would go)
+                    // if (unit.movementType === 'air' && !this.canHitAir) continue;
+
+                    if (unit.isAlive && unit.team !== this.team) {
+                        const dist = getDistance(this.x, this.y, unit.x, unit.y);
+                        if (dist <= closestDist) {
+                            closestDist = dist;
+                            this.target = unit;
+                        }
+                    }
+                }
+            }
+
+            update(deltaTime) {
+                if (!this.isAlive) return;
+                
+                // NEW: Handle Stun
+                if (this.isStunned) {
+                    this.stunTimer -= deltaTime;
+                    if (this.stunTimer <= 0) {
+                        this.isStunned = false;
+                    }
+                    return; // Do nothing else while stunned
+                }
+                
+                this.findTarget();
+                if (this.attackCooldown > 0) {
+                    this.attackCooldown -= deltaTime;
+                }
+                if (this.target && this.attackCooldown <= 0) {
+                    this.attack();
+                    this.attackCooldown = 1 / this.attackSpeed;
+                }
+            }
+
+            attack() {
+                projectiles.push(new Projectile(this.x, this.y, this.damage, this.target, this.team));
+            }
+
+            draw() {
+                // Main tower body
+                ctx.fillStyle = this.team === TEAM_PLAYER ? '#a9c0e1' : '#f0b0b0'; // Lighter blue/red
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+                // Roof
+                ctx.fillStyle = this.team === TEAM_PLAYER ? '#3b82f6' : '#ef4444'; // blue/red
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, 10);
+                
+                // NEW: Cannon Emoji
+                ctx.font = `${this.width * 0.6}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('💣', this.x, this.y + 5);
+
+
+                if (this.isKing) {
+                    ctx.fillStyle = '#facc15';
+                    ctx.font = '24px Arial';
+                    ctx.fillText('👑', this.x, this.y - this.height / 2 - 10);
+                }
+                
+                // NEW: Show stun visual
+                if (this.isStunned) {
+                    ctx.font = '24px Arial';
+                    ctx.fillText('⚡', this.x, this.y - this.height / 2 - 20);
+                }
+                
+                this.drawHpBar();
+            }
+        }
+
+        class Unit extends Entity {
+            // ... (Updated to handle different target types)
+            constructor(x, y, team, stats, emoji) { // <-- ADDED EMOJI
+                super(x, y, team, stats.hp, 30, 30); // Use 30 for emoji size
+                this.speed = stats.speed;
+                this.range = stats.range;
+                this.attackSpeed = stats.attackSpeed;
+                this.damage = stats.damage;
+                this.targetType = stats.targetType;
+                this.emoji = emoji; // <-- ASSIGNED HERE
+                this.movementType = stats.movementType; // 'ground' or 'air'
+                this.splashRadius = stats.splashRadius || 0; // For splash attackers
+                
+                this.attackCooldown = 0;
+                this.target = null;
+                this.path = [];
+                this.currentWaypoint = 0;
+                this.aggroRange = 100;
+
+                this.setPath(x);
+            }
+
+            setPath(spawnX) {
+                const laneX = (spawnX < canvas.width / 2) ? LANE_LEFT_X : LANE_RIGHT_X;
+                const enemyBaseY = this.team === TEAM_PLAYER ? canvas.height * 0.15 : canvas.height * 0.85;
+                
+                const bridgeY = this.team === TEAM_PLAYER ? BRIDGE_Y - TILE_SIZE : BRIDGE_Y + TILE_SIZE;
+                
+                this.path = [
+                    { x: laneX, y: bridgeY },
+                    { x: laneX, y: enemyBaseY } 
+                ];
+            }
+
+            findTarget() {
+                // 1. Giant-specific logic
+                if (this.targetType === TARGET_BUILDING) {
+                    this.findBuildingTarget();
+                    return;
+                }
+
+                // 2. Standard unit logic (check aggro)
+                this.target = null;
+                let closestDist = this.aggroRange;
+                for (const unit of units) {
+                    // *** ADDED CHECK: Ground units cannot target air units ***
+                    if (unit.movementType === 'air' && (this.targetType === TARGET_GROUND || this.movementType === 'ground' && this.range <= 30)) {
+                        continue; // Skip this target
+                    }
+                    // *** ADDED CHECK: Air units ignore ground units ***
+                    if (this.movementType === 'air' && unit.movementType === 'ground') {
+                        continue;
+                    }
+
+                    if (unit.isAlive && unit.team !== this.team && unit.targetType !== TARGET_BUILDING) { // Giants don't aggro
+                        const dist = getDistance(this.x, this.y, unit.x, unit.y);
+                        if (dist < closestDist) {
+                            closestDist = dist;
+                            this.target = unit;
+                        }
+                    }
+                }
+                if (this.target) return; // Found a unit
+
+                // 3. If no units, find a tower
+                this.findBuildingTarget();
+            }
+
+            findBuildingTarget() {
+                let closestDist = Infinity;
+                let bestTarget = null;
+                const allBuildings = [...towers, ...spawners]; // *** Now checks spawners too ***
+
+                for (const building of allBuildings) {
+                    if (building.isAlive && building.team !== this.team) {
+                        const dist = getDistance(this.x, this.y, building.x, building.y);
+                        
+                        // Simple lane check
+                        if (Math.abs(building.x - this.x) < TILE_SIZE * 2) {
+                            if (dist < closestDist) {
+                                closestDist = dist;
+                                bestTarget = building;
+                            }
+                        }
+                    }
+                }
+                 
+                // If no tower in lane, target king
+                if (!bestTarget) {
+                    for (const tower of towers) {
+                        if (tower.isAlive && tower.team !== this.team && tower.isKing) {
+                            bestTarget = tower;
+                            break;
+                        }
+                    }
+                }
+                this.target = bestTarget;
+            }
+
+            update(deltaTime) {
+                if (!this.isAlive) return;
+
+                // NEW: Handle Stun
+                if (this.isStunned) {
+                    this.stunTimer -= deltaTime;
+                    if (this.stunTimer <= 0) {
+                        this.isStunned = false;
+                    }
+                    return; // Do nothing else while stunned
+                }
+                
+                this.findTarget();
+                if (this.attackCooldown > 0) {
+                    this.attackCooldown -= deltaTime;
+                }
+
+                if (this.target) {
+                    const distToTarget = getDistance(this.x, this.y, this.target.x, this.target.y);
+                    if (distToTarget <= this.range) {
+                        if (this.attackCooldown <= 0) {
+                            this.attack();
+                            this.attackCooldown = 1 / this.attackSpeed;
+                        }
+                    } else {
+                        this.move(this.target.x, this.target.y, deltaTime);
+                    }
+                } else {
+                    if (this.currentWaypoint < this.path.length) {
+                        const wp = this.path[this.currentWaypoint];
+                        this.move(wp.x, wp.y, deltaTime);
+                        if (getDistance(this.x, this.y, wp.x, wp.y) < 10) {
+                            this.currentWaypoint++;
+                        }
+                    }
+                }
+            }
+
+            move(targetX, targetY, deltaTime) {
+                // ... (Same as before)
+                const dist = getDistance(this.x, this.y, targetX, targetY);
+                if (dist < 2) return;
+                const dx = targetX - this.x;
+                const dy = targetY - this.y;
+                const vx = (dx / dist) * this.speed * deltaTime;
+                const vy = (dy / dist) * this.speed * deltaTime;
+                this.x += vx;
+                this.y += vy;
+            }
+
+            attack() {
+                // *** ADDED SPLASH DAMAGE LOGIC (for Wizard) ***
+                if (this.splashRadius > 0 && this.range > 30) { // Ranged Splash (Wizard)
+                    // Create a projectile that will explode on impact
+                    projectiles.push(new Projectile(this.x, this.y, this.damage, this.target, this.team, true, this.splashRadius));
+                }
+                else if (this.range > 30) { // Ranged (single target)
+                    projectiles.push(new Projectile(this.x, this.y, this.damage, this.target, this.team));
+                } else { // Melee
+                    // *** ADDED SPLASH DAMAGE LOGIC (for Valkyrie) ***
+                    if (this.splashRadius > 0) {
+                        // Hit all ground units in splash radius
+                        units.forEach(unit => {
+                            if (unit.isAlive && unit.team !== this.team && unit.movementType === 'ground') {
+                                const dist = getDistance(this.x, this.y, unit.x, unit.y);
+                                if (dist <= this.splashRadius) {
+                                    unit.takeDamage(this.damage);
+                                }
+                            }
+                        });
+                    } else {
+                        // Standard melee attack
+                        this.target.takeDamage(this.damage);
+                    }
+                }
+            }
+
+            draw() {
+                // Draw circle base
+                ctx.fillStyle = this.team === TEAM_PLAYER ? '#60a5fa' : '#f87171'; // light blue/red
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = this.team === TEAM_PLAYER ? '#1d4ed8' : '#b91c1c'; // dark blue/red
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw emoji
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.emoji, this.x, this.y);
+                
+                // NEW: Show stun visual
+                if (this.isStunned) {
+                    ctx.font = '24px Arial';
+                    ctx.fillText('⚡', this.x, this.y - this.height / 2 - 20);
+                }
+
+                this.drawHpBar();
+            }
+        }
+        
+        class Projectile {
+            // ... (Updated for splash damage)
+            constructor(x, y, damage, target, team, isSplash = false, splashRadius = 0) {
+                this.x = x;
+                this.y = y;
+                this.damage = damage;
+                this.target = target;
+                this.team = team;
+                this.speed = 300;
+                this.isAlive = true;
+                this.isSplash = isSplash;
+                this.splashRadius = splashRadius;
+            }
+
+            update(deltaTime) {
+                if (!this.isAlive || !this.target.isAlive) {
+                    this.isAlive = false;
+                    return;
+                }
+                const dist = getDistance(this.x, this.y, this.target.x, this.target.y);
+                if (dist < 10) {
+                    // --- Handle Impact ---
+                    if (this.isSplash) {
+                        // Create an explosion for splash damage (visual only, damage is instant)
+                        effects.push(new Explosion(this.x, this.y, this.splashRadius, 0, 0.3)); // 0 damage, just visual
+                        // Damage all units in radius
+                        units.forEach(unit => {
+                             if (unit.isAlive && unit.team !== this.team) {
+                                const splashDist = getDistance(this.x, this.y, unit.x, unit.y);
+                                if (splashDist <= this.splashRadius) {
+                                    unit.takeDamage(this.damage);
+                                }
+                            }
+                        });
+                    } else {
+                        // Single target damage
+                        this.target.takeDamage(this.damage);
+                    }
+                    this.isAlive = false;
+                    return;
+                }
+                const dx = this.target.x - this.x;
+                const dy = this.target.y - this.y;
+                const vx = (dx / dist) * this.speed * deltaTime;
+                const vy = (dy / dist) * this.speed * deltaTime;
+                this.x += vx;
+                this.y += vy;
+            }
+
+            draw() {
+                ctx.fillStyle = this.isSplash ? '#f97316' : (this.team === TEAM_PLAYER ? '#a5f3fc' : '#fecaca');
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.isSplash ? 8 : 5, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // --- NEW: Spawner Class (for Goblin Hut) ---
+        class Spawner extends Entity {
+            constructor(x, y, team, stats, emoji) {
+                super(x, y, team, stats.hp, 40, 40);
+                this.emoji = emoji;
+                this.lifetime = stats.lifetime;
+                this.spawnRate = stats.spawnRate;
+                this.unitToSpawn = stats.unitToSpawn;
+                this.movementType = stats.movementType; // 'ground'
+                this.spawnTimer = this.spawnRate;
+                this.isKing = false; // So it can be targeted
+            }
+
+            update(deltaTime) {
+                if (!this.isAlive) return;
+
+                this.lifetime -= deltaTime;
+                if (this.lifetime <= 0) {
+                    this.isAlive = false;
+                    return;
+                }
+
+                this.spawnTimer -= deltaTime;
+                if (this.spawnTimer <= 0) {
+                    this.spawnTimer = this.spawnRate;
+                    this.spawnUnit();
+                }
+            }
+
+            spawnUnit() {
+                const card = masterCardList[this.unitToSpawn];
+                if (card) {
+                    // Spawn unit slightly in front of the hut
+                    const spawnY = this.team === TEAM_PLAYER ? this.y - 10 : this.y + 10;
+                    units.push(new Unit(this.x, spawnY, this.team, card.stats, card.emoji));
+                }
+            }
+
+            draw() {
+                // Draw like a building
+                ctx.fillStyle = this.team === TEAM_PLAYER ? '#a9c0e1' : '#f0b0b0';
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+                
+                ctx.font = `${this.width * 0.8}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.emoji, this.x, this.y);
+
+                this.drawHpBar();
+                
+                // Draw lifetime bar
+                const barWidth = 40;
+                const barHeight = 5;
+                const barX = this.x - barWidth / 2;
+                const barY = this.y + this.height / 2 + 5;
+                
+                ctx.fillStyle = '#888';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+                const lifePercent = this.lifetime / masterCardList.goblinHut.stats.lifetime; // Assumes stats access
+                ctx.fillStyle = '#eee';
+                ctx.fillRect(barX, barY, barWidth * lifePercent, barHeight);
+            }
+        }
+
+        // --- NEW: Effect Class (for Fireball/Zap) ---
+        class Explosion {
+            constructor(x, y, radius, damage, duration, stunDuration = 0) {
+                this.x = x;
+                this.y = y;
+                this.maxRadius = radius;
+                this.damage = damage;
+                this.duration = duration;
+                this.stunDuration = stunDuration;
+                this.age = 0;
+                this.isAlive = true;
+                this.hitTargets = new Set(); // Ensure we only hit each target once
+
+                // Damage all targets in range instantly
+                [...units, ...towers, ...spawners].forEach(target => { // *** Now hits spawners ***
+                    if (target.isAlive && !this.hitTargets.has(target)) {
+                        const dist = getDistance(this.x, this.y, target.x, target.y);
+                        if (dist <= this.maxRadius) {
+                            if (this.damage > 0) {
+                                target.takeDamage(this.damage);
+                            }
+                            if (this.stunDuration > 0) {
+                                target.applyStun(this.stunDuration);
+                            }
+                            this.hitTargets.add(target);
+                        }
+                    }
+                });
+            }
+
+            update(deltaTime) {
+                this.age += deltaTime;
+                if (this.age >= this.duration) {
+                    this.isAlive = false;
+                }
+            }
+
+            draw() {
+                const lifePercent = this.age / this.duration;
+                const currentRadius = this.maxRadius * Math.sin(lifePercent * Math.PI); // Grow and shrink
+                const opacity = 1 - lifePercent;
+
+                // Zap is blue, Fireball is orange
+                const color = this.stunDuration > 0 ? `rgba(59, 130, 246, ${opacity * 0.8})` : `rgba(255, 165, 0, ${opacity * 0.8})`;
+                const stroke = this.stunDuration > 0 ? `rgba(147, 197, 253, ${opacity})` : `rgba(255, 69, 0, ${opacity})`;
+
+                ctx.fillStyle = color;
+                ctx.strokeStyle = stroke;
+                ctx.lineWidth = 5;
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, currentRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        // --- Game Logic ---
+        function resizeGame() {
+            // ... (Same as before)
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            const availableHeight = viewportHeight - 250;
+            const availableWidth = viewportWidth - 40;
+            let newHeight = availableHeight;
+            let newWidth = newHeight * (BASE_CANVAS_WIDTH / BASE_CANVAS_HEIGHT);
+            if (newWidth > availableWidth) {
+                newWidth = availableWidth;
+                newHeight = newWidth * (BASE_CANVAS_HEIGHT / BASE_CANVAS_WIDTH);
+            }
+            canvas.width = BASE_CANVAS_WIDTH;
+            canvas.height = BASE_CANVAS_HEIGHT;
+            gameContainer.style.width = `${newWidth}px`;
+            gameContainer.style.height = `${newHeight}px`;
+        }
+
+        function initGame() {
+            elixir = 5;
+            aiElixir = 5; // <-- Initialize AI elixir
+            elixirTimer = 0;
+            gameTimer = gameDuration;
+            gameTime = 0; // <-- INITIALIZED IT HERE
+            currentElixirRate = elixirRate;
+            isDoubleElixir = false;
+            aiSpawnTimer = 0;
+            gameOver = false;
+            selectedCard = null;
+            
+            towers = [];
+            units = [];
+            projectiles = [];
+            effects = [];
+            spawners = []; // *** Clear spawners ***
+
+            // Player Towers
+            towers.push(new Tower(LANE_LEFT_X, canvas.height * 0.85, TEAM_PLAYER));
+            towers.push(new Tower(LANE_RIGHT_X, canvas.height * 0.85, TEAM_PLAYER));
+            towers.push(new Tower(canvas.width / 2, canvas.height * 0.9, TEAM_PLAYER, true));
+
+            // AI Towers
+            towers.push(new Tower(LANE_LEFT_X, canvas.height * 0.15, TEAM_AI));
+            towers.push(new Tower(LANE_RIGHT_X, canvas.height * 0.15, TEAM_AI));
+            towers.push(new Tower(canvas.width / 2, canvas.height * 0.1, TEAM_AI, true));
+
+            // --- Deck and Hand Setup ---
+            let shuffledDeck = [...fullPlayerDeck].sort(() => 0.5 - Math.random());
+            playerHand = shuffledDeck.slice(0, 4);
+            drawPile = shuffledDeck.slice(4, 8);
+
+            gameOverModal.classList.add('hidden');
+            gameOverModal.classList.remove('flex');
+            
+            buildPlayerHand();
+            drawNextCard(); // *** Draw first "next card" ***
+            showGameMessage("Battle Start!");
+            
+            // NEW: Initialize Elixir Bar
+            elixirBar.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const segment = document.createElement('div');
+                segment.className = 'elixir-segment';
+                segment.id = `elixir-seg-${i}`;
+                elixirBar.appendChild(segment);
+            }
+
+            if (gameLoopId) {
+                cancelAnimationFrame(gameLoopId);
+            }
+            gameLoop(0); // Start the loop
+        }
+
+        // --- NEW: Fixed createCardElement function ---
+        function createCardElement(card, isSelected, clickHandler) {
+            const cardEl = document.createElement('div');
+            // Simplified className as many styles are now in CSS
+            cardEl.className = `card w-20 h-28 bg-gray-700 rounded-lg shadow-lg ${isSelected ? 'selected' : ''}`;
+            cardEl.dataset.id = card.id;
+
+            cardEl.innerHTML = `
+                <div class="absolute -top-2 -right-2 bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center game-font text-lg border-2 border-white">${card.cost}</div>
+                <div class="card-image-container">
+                    <img src="${card.imageUrl}" alt="${card.name}">
+                </div>
+                <div class="card-text-container">
+                    <div class="card-name">${card.name}</div>
+                    <div class="card-type">${card.type}</div>
+                </div>
+            `;
+            
+            if (clickHandler) {
+                cardEl.addEventListener('click', () => clickHandler(card));
+            }
+            return cardEl;
+        }
+
+        function buildPlayerHand() {
+            playerHandContainer.innerHTML = ''; // Clear old hand
+            playerHand.forEach(cardId => {
+                const card = masterCardList[cardId];
+                const cardEl = createCardElement(card, false, () => {
+                    if (elixir >= card.cost) {
+                        selectedCard = (selectedCard && selectedCard.id === card.id) ? null : card; // Toggle
+                    } else {
+                        console.log("Not enough elixir");
+                    }
+                });
+
+                // NEW: Hide text for in-game hand
+                const textContainer = cardEl.querySelector('.card-text-container');
+                if (textContainer) {
+                    textContainer.style.display = 'none';
+                }
+                // Adjust image container to fill space
+                const imageContainer = cardEl.querySelector('.card-image-container');
+                if (imageContainer) {
+                    imageContainer.style.height = '100%';
+                }
+                
+                // NEW: Remove card background/border for in-game
+                cardEl.style.backgroundColor = 'transparent';
+                cardEl.style.border = 'none';
+
+                playerHandContainer.appendChild(cardEl);
+            });
+        }
+
+        function drawNextCard() {
+            nextCardSlot.innerHTML = '';
+            if (drawPile.length > 0) {
+                const nextCardId = drawPile[0];
+                const card = masterCardList[nextCardId];
+                if (card) {
+                    const cardEl = createCardElement(card, false, null); // No click handler
+                    cardEl.classList.add('w-full', 'h-full', 'p-0'); // Apply sizing directly
+                    
+                    // NEW: Hide text for next card
+                    const textContainer = cardEl.querySelector('.card-text-container');
+                    if (textContainer) {
+                        textContainer.style.display = 'none';
+                    }
+                    // Adjust image container to fill space
+                    const imageContainer = cardEl.querySelector('.card-image-container');
+                    if (imageContainer) {
+                        imageContainer.style.height = '100%';
+                    }
+                    
+                    // NEW: Remove card background/border for in-game
+                    cardEl.style.backgroundColor = 'transparent';
+                    cardEl.style.border = 'none';
+
+                    nextCardSlot.appendChild(cardEl);
+                }
+            }
+        }
+
+        function drawArena() {
+            // NEW: Brighter Green Grass
+            ctx.fillStyle = '#65a30d'; // lime-600
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // NEW: Tan/Yellow Paths
+            ctx.fillStyle = '#fde047'; // yellow-300
+            // Narrower paths
+            ctx.fillRect(LANE_LEFT_X - TILE_SIZE/1.5, 0, TILE_SIZE * 1.5, canvas.height);
+            ctx.fillRect(LANE_RIGHT_X - TILE_SIZE/1.5, 0, TILE_SIZE * 1.5, canvas.height);
+
+            // NEW: Brighter Blue River
+            ctx.fillStyle = '#38bdf8'; // sky-400
+            ctx.fillRect(0, BRIDGE_Y - TILE_SIZE / 2, canvas.width, TILE_SIZE);
+
+            // NEW: Lighter Wood Bridges
+            ctx.fillStyle = '#fde047'; // Bridges are part of the path
+            ctx.fillRect(LANE_LEFT_X - TILE_SIZE / 1.5, BRIDGE_Y - TILE_SIZE / 2, TILE_SIZE * 1.5, TILE_SIZE);
+            ctx.fillRect(LANE_RIGHT_X - TILE_SIZE / 1.5, BRIDGE_Y - TILE_SIZE / 2, TILE_SIZE * 1.5, TILE_SIZE);
+            // Bridge "planks"
+            ctx.fillStyle = '#a16207'; // yellow-800
+            ctx.fillRect(LANE_LEFT_X - TILE_SIZE / 1.5, BRIDGE_Y - TILE_SIZE / 2, 5, TILE_SIZE);
+            ctx.fillRect(LANE_LEFT_X + TILE_SIZE / 1.5 - 5, BRIDGE_Y - TILE_SIZE / 2, 5, TILE_SIZE);
+            ctx.fillRect(LANE_RIGHT_X - TILE_SIZE / 1.5, BRIDGE_Y - TILE_SIZE / 2, 5, TILE_SIZE);
+            ctx.fillRect(LANE_RIGHT_X + TILE_SIZE / 1.5 - 5, BRIDGE_Y - TILE_SIZE / 2, 5, TILE_SIZE);
+            
+            // Tower Bases (cosmetic)
+            ctx.fillStyle = '#b91c1c';
+            ctx.fillRect(0, 0, canvas.width, TILE_SIZE*0.75);
+            ctx.fillStyle = '#1d4ed8';
+            ctx.fillRect(0, canvas.height - TILE_SIZE*0.75, canvas.width, TILE_SIZE*0.75);
+        }
+
+        function updateUI() {
+            // NEW: Segmented Elixir Bar
+            const elixirInt = Math.floor(elixir);
+            for (let i = 0; i < 10; i++) {
+                const segment = document.getElementById(`elixir-seg-${i}`);
+                if (i < elixirInt) {
+                    segment.classList.add('filled');
+                } else {
+                    segment.classList.remove('filled');
+                }
+            }
+
+            // Timer
+            const minutes = Math.floor(gameTimer / 60);
+            const seconds = Math.floor(gameTimer % 60);
+            gameTimerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            if (gameTimer <= 60) {
+                gameTimerDisplay.style.color = '#ef4444'; // Red
+            } else {
+                gameTimerDisplay.style.color = 'white';
+            }
+
+            // Cards
+            const cardElements = playerHandContainer.querySelectorAll('.card');
+            cardElements.forEach(cardEl => {
+                const card = masterCardList[cardEl.dataset.id];
+                if (!card) return; // Guard against empty/undefined cards
+                if (elixirInt < card.cost) {
+                    cardEl.classList.add('disabled');
+                } else {
+                    cardEl.classList.remove('disabled');
+                }
+                
+                if (selectedCard && selectedCard.id === card.id) {
+                    cardEl.classList.add('selected');
+                } else {
+                    cardEl.classList.remove('selected');
+                }
+            });
+        }
+
+        function updateAI(deltaTime) {
+            aiSpawnTimer += deltaTime;
+            if (aiSpawnTimer >= aiSpawnRate) {
+                aiSpawnTimer = 0;
+                
+                const aiDeck = Object.keys(masterCardList).filter(id => masterCardList[id].type === 'unit'); // AI can use all units
+                const unitType = aiDeck[Math.floor(Math.random() * aiDeck.length)];
+                const card = masterCardList[unitType];
+
+                // *** NEW ELIXIR CHECK ***
+                if (aiElixir >= card.cost) {
+                    aiElixir -= card.cost; // Spend elixir
+                    
+                    const laneX = Math.random() < 0.5 ? LANE_LEFT_X : LANE_RIGHT_X;
+                    const spawnY = 50;
+                    
+                    units.push(new Unit(laneX, spawnY, TEAM_AI, card.stats, card.emoji));
+                }
+                // If not enough elixir, the AI just waits for its next attempt
+            }
+        }
+
+        function playCard(x, y) {
+            if (!selectedCard) return;
+            
+            const card = selectedCard;
+            if (elixir < card.cost) {
+                console.log("Not enough elixir!");
+                return;
+            }
+            
+            const cardIndex = playerHand.indexOf(card.id);
+            if (cardIndex === -1) {
+                console.log("Card not in hand!");
+                selectedCard = null; // Deselect
+                return;
+            }
+
+            if (card.type === 'unit') {
+                // Can't deploy on enemy side
+                if (y < BRIDGE_Y) {
+                    console.log("Can't deploy on enemy side!");
+                    return;
+                }
+                elixir -= card.cost;
+                units.push(new Unit(x, y, TEAM_PLAYER, card.stats, card.emoji));
+            } 
+            else if (card.type === 'spell') {
+                elixir -= card.cost;
+                effects.push(new Explosion(x, y, card.stats.radius, card.stats.damage, card.stats.duration, card.stats.stunDuration || 0));
+            }
+            else if (card.type === 'spawner') { // *** Handle Spawner ***
+                // Can't deploy on enemy side
+                if (y < BRIDGE_Y) {
+                    console.log("Can't deploy on enemy side!");
+                    return;
+                }
+                elixir -= card.cost;
+                spawners.push(new Spawner(x, y, TEAM_PLAYER, card.stats, card.emoji));
+            }
+            
+            // --- Card Cycling Logic ---
+            selectedCard = null;
+            const playedCardId = playerHand.splice(cardIndex, 1)[0]; // Remove from hand
+            const nextCardId = drawPile.shift(); // Get next card from draw pile
+            playerHand.push(nextCardId); // Add new card to hand
+            drawPile.push(playedCardId); // Add played card to back of draw pile
+            
+            buildPlayerHand(); // Redraw hand
+            drawNextCard(); // *** Update the "next card" display ***
+        }
+
+        function showGameMessage(text) {
+            gameMessage.textContent = text;
+            gameMessage.style.display = 'block';
+            gameMessage.style.opacity = 1;
+            
+            setTimeout(() => {
+                gameMessage.style.transition = 'opacity 1s ease-out';
+                gameMessage.style.opacity = 0;
+                setTimeout(() => {
+                    gameMessage.style.display = 'none';
+                    gameMessage.style.transition = '';
+                }, 1000);
+            }, 2000); // Show message for 2 seconds
+        }
+
+        function handleTimeUp() {
+            let playerTowersDestroyed = 0;
+            let aiTowersDestroyed = 0;
+            let playerKingTower = null;
+            let aiKingTower = null;
+
+            towers.forEach(t => {
+                if (t.team === TEAM_AI) {
+                    if (t.isKing) aiKingTower = t;
+                    if (!t.isAlive && !t.isKing) playerTowersDestroyed++;
+                } else {
+                    if (t.isKing) playerKingTower = t;
+                    if (!t.isAlive && !t.isKing) aiTowersDestroyed++;
+                }
+            });
+
+            if (playerTowersDestroyed > aiTowersDestroyed) {
+                endGame(TEAM_PLAYER);
+            } else if (aiTowersDestroyed > playerTowersDestroyed) {
+                endGame(TEAM_AI);
+            } else {
+                // Towers destroyed are equal, check King Tower HP
+                if (playerKingTower.hp > aiKingTower.hp) {
+                    endGame(TEAM_PLAYER);
+                } else if (aiKingTower.hp > playerKingTower.hp) {
+                    endGame(TEAM_AI);
+                } else {
+                    endGame('tie'); // It's a draw!
+                }
+            }
+        }
+
+        function endGame(winner) {
+            if (gameOver) return;
+            gameOver = true;
+            cancelAnimationFrame(gameLoopId);
+
+            if (winner === 'tie') {
+                gameOverText.textContent = "Draw!";
+                gameOverText.style.color = "#f59e0b"; // Amber
+            } else {
+                gameOverText.textContent = winner === TEAM_PLAYER ? "Victory!" : "Defeat!";
+                gameOverText.style.color = winner === TEAM_PLAYER ? "#facc15" : "#ef4444";
+            }
+            gameOverModal.classList.remove('hidden');
+            gameOverModal.classList.add('flex');
+        }
+
+        // --- Main Game Loop ---
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            if (gameOver) return;
+            gameLoopId = requestAnimationFrame(gameLoop);
+            const deltaTime = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+            if (isNaN(deltaTime) || deltaTime > 0.5) return;
+            
+            gameTime += deltaTime;
+            gameTimer -= deltaTime;
+
+            if (gameTimer <= 0) {
+                gameTimer = 0;
+                updateUI(); // Final UI update
+                handleTimeUp();
+                return;
+            }
+
+            // --- Update ---
+            // 2x Elixir Logic
+            if (gameTimer <= 60 && !isDoubleElixir) {
+                isDoubleElixir = true;
+                currentElixirRate = elixirRate / 2;
+                showGameMessage("2x Elixir!");
+                doubleElixirBadge.style.display = 'flex'; // Show badge
+            }
+
+            if (elixir < maxElixir || aiElixir < maxElixir) { // <-- Check both player and AI
+                elixirTimer += deltaTime;
+                if (elixirTimer >= currentElixirRate) { // Use current rate
+                    elixirTimer = 0;
+                    if (elixir < maxElixir) { // <-- Update player elixir
+                        elixir = Math.min(maxElixir, elixir + 1);
+                    }
+                    if (aiElixir < maxElixir) { // <-- Update AI elixir
+                        aiElixir = Math.min(maxElixir, aiElixir + 1);
+                    }
+                }
+            }
+            updateAI(deltaTime);
+            [...towers, ...units, ...projectiles, ...effects, ...spawners].forEach(e => e.update(deltaTime)); // *** Update spawners ***
+
+            // Clean up dead entities
+            units = units.filter(u => u.isAlive);
+            projectiles = projectiles.filter(p => p.isAlive);
+            effects = effects.filter(e => e.isAlive);
+            spawners = spawners.filter(s => s.isAlive); // *** Clean spawners ***
+
+            // --- Draw ---
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawArena();
+            [...towers, ...spawners, ...units, ...projectiles, ...effects].forEach(e => e.draw()); // *** Draw spawners ***
+
+            // --- UI ---
+            updateUI();
+        }
+
+        // --- Event Listeners ---
+        canvas.addEventListener('click', (e) => {
+            if (!selectedCard) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            playCard(x, y);
+        });
+
+        restartButton.addEventListener('click', () => {
+            showScreen('mainMenu'); // Go back to menu
+        });
+
+        // NEW: Static Battle Button Listener
+        battleButton.addEventListener('click', () => {
+             if (fullPlayerDeck.length < 8) {
+                alert("Please select 8 cards for your deck first!");
+                showScreen('deckBuilderScreen');
+                updateDeckBuilderUI();
+                return;
+            }
+            showScreen('gameScreen');
+            resizeGame(); // Size game on load
+            initGame();
+        });
+
+        // --- Deck Builder Logic ---
+        const saveDeckButton = document.getElementById('saveDeckButton');
+        const cardCollection = document.getElementById('cardCollection');
+        const deckSlots = [
+            document.getElementById('deckSlot1'),
+            document.getElementById('deckSlot2'),
+            document.getElementById('deckSlot3'),
+            document.getElementById('deckSlot4'),
+            document.getElementById('deckSlot5'),
+            document.getElementById('deckSlot6'),
+            document.getElementById('deckSlot7'),
+            document.getElementById('deckSlot8')
+        ];
+        
+        function updateDeckBuilderUI() {
+            // Update deck slots
+            deckSlots.forEach((slotEl, index) => {
+                slotEl.innerHTML = ''; // Clear existing content
+
+                if (fullPlayerDeck[index]) {
+                    const cardId = fullPlayerDeck[index];
+                    const card = masterCardList[cardId];
+                    if (card) {
+                        // FIX: Remove placeholder styles from the slot itself and apply general card styles
+                        slotEl.className = 'card w-20 h-28'; // Just apply 'card' class for proper styling
+                        
+                        const cardElement = createCardElement(card, false, null); // No click handler directly on slot card
+                        // Remove specific sizing from the card element as the slot dictates size
+                        cardElement.classList.remove('w-20', 'h-28'); 
+                        cardElement.style.width = '100%'; // Make it fill the slot
+                        cardElement.style.height = '100%'; // Make it fill the slot
+
+                        // Also adjust text sizes for cards in the deck slots
+                        const cardName = cardElement.querySelector('.card-name');
+                        const cardType = cardElement.querySelector('.card-type');
+                        if (cardName) cardName.style.fontSize = '0.7rem'; // Slightly smaller font
+                        if (cardType) cardType.style.fontSize = '0.5rem'; // Slightly smaller font
+                        
+                        slotEl.appendChild(cardElement);
+                        
+                        // Make the card in the deck clickable to remove it
+                        cardElement.addEventListener('click', () => {
+                            fullPlayerDeck.splice(index, 1); // Remove card at this index
+                            updateDeckBuilderUI(); // Re-render
+                        });
+                    }
+                } else {
+                    // Render an empty slot placeholder
+                    slotEl.className = 'card-slot w-20 h-28 bg-gray-900 rounded-lg flex items-center justify-center text-gray-500';
+                    slotEl.textContent = `Slot ${index + 1}`;
+                }
+            });
+
+            // Update card collection
+            cardCollection.innerHTML = '';
+            Object.values(masterCardList).forEach(card => {
+                const isSelected = fullPlayerDeck.includes(card.id);
+                const cardEl = createCardElement(card, isSelected, (clickedCard) => {
+                    const index = fullPlayerDeck.indexOf(clickedCard.id);
+                    if (index > -1) {
+                        // Card is in deck, remove it
+                        fullPlayerDeck.splice(index, 1);
+                    } else if (fullPlayerDeck.length < 8) {
+                        // Card not in deck, add it
+                        fullPlayerDeck.push(clickedCard.id);
+                    }
+                    updateDeckBuilderUI();
+                });
+                
+                if (isSelected) {
+                    cardEl.classList.add('disabled'); // Gray out if selected
+                }
+                cardCollection.appendChild(cardEl);
+            });
+        }
+
+        // NEW: Bottom Bar Listeners
+        mainMenuTab.addEventListener('click', () => {
+            showScreen('mainMenu');
+        });
+
+        deckBuilderTab.addEventListener('click', () => {
+            // No deck validation on just viewing the tab
+            showScreen('deckBuilderScreen');
+            updateDeckBuilderUI();
+        });
+        
+        // --- NEW: Gemini API Functions ---
+        
+        // Helper function for exponential backoff
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        async function fetchWithBackoff(apiUrl, payload, retries = 3) {
+            let delay = 1000; // Start with 1 second
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                    
+                    // Handle non-OK responses (e.g., throttling)
+                    if (response.status === 429 || response.status >= 500) {
+                        // Throttled or server error, wait and retry
+                        await sleep(delay);
+                        delay *= 2; // Double the delay for the next retry
+                    } else {
+                        // Other client-side error (e.g., 400), don't retry
+                        return response.json(); // Return error response
+                    }
+                } catch (error) {
+                    // Network error, wait and retry
+                    await sleep(delay);
+                    delay *= 2;
+                }
+            }
+            throw new Error("Failed to fetch from Gemini API after multiple retries.");
+        }
+
+        async function fetchGeminiAnalysis() {
+            if (fullPlayerDeck.length < 8) {
+                geminiTipsContainer.style.display = 'block';
+                geminiTipsContent.textContent = 'Please select 8 cards for your deck before I can analyze it.';
+                return;
+            }
+
+            geminiTipsContainer.style.display = 'block';
+            geminiTipsContent.textContent = 'Analyzing your deck... (This may take a moment)';
+            
+            const cardNames = fullPlayerDeck.map(id => masterCardList[id].name).join(', ');
+            
+            const systemPrompt = "You are a professional 'Clash-style' game analyst. Your goal is to give concise, strategic advice on a player's 8-card deck. Focus on elixir cost, offensive potential, defensive potential, and synergies. Keep your analysis to a short paragraph.";
+            const userQuery = `Analyze this deck: ${cardNames}. What are its strengths and weaknesses?`;
+            
+            const apiKey = ""; // API key is handled by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                // No 'tools' property needed for this request
+            };
+
+            try {
+                const result = await fetchWithBackoff(apiUrl, payload);
+                
+                const candidate = result?.candidates?.[0];
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const text = candidate.content.parts[0].text;
+                    geminiTipsContent.textContent = text;
+                } else {
+                    geminiTipsContent.textContent = 'Sorry, I received an unexpected response. Please try again.';
+                    console.error('Unexpected Gemini response:', result);
+                }
+            } catch (error) {
+                console.error('Error fetching Gemini analysis:', error);
+                geminiTipsContent.textContent = 'Error connecting to the AI analyst. Please check your connection and try again.';
+            }
+        }
+        
+        analyzeDeckButton.addEventListener('click', fetchGeminiAnalysis);
+        
+        // --- Start Game ---
+        window.addEventListener('resize', () => {
+            if (gameScreen.style.display === 'flex') {
+                resizeGame();
+            }
+        });
+
+        window.onload = () => {
+            // Show the main menu by default
+            showScreen('mainMenu');
+        };
+
+    </script>
+</body>
+</html>
