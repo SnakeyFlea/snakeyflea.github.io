@@ -375,6 +375,34 @@
             font-size: 1.2rem;
             margin-bottom: 0.5rem;
         }
+        
+        /* NEW: Game Over Modal Styling */
+        #gameOverModal {
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.9));
+        }
+        #gameOverBanner {
+            background-image: linear-gradient(to bottom, #4f8ff7, #3b82f6);
+            border: 4px solid #bfdbfe;
+            border-radius: 10px;
+            padding: 1rem 3rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        #gameOverText {
+            font-size: 5rem;
+            color: white;
+            text-shadow: 4px 4px 0 rgba(0,0,0,0.3);
+        }
+        #gameOverCrowns {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+        }
+        #restartButton {
+            /* Re-use menu button style */
+            @apply px-10 py-5 bg-yellow-500 text-gray-900 game-font text-4xl rounded-lg shadow-lg hover:bg-yellow-400 transition transform hover:scale-105;
+        }
+
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4">
@@ -475,9 +503,15 @@
 
             
 
-<div id="gameOverModal" class="absolute inset-0 bg-black bg-opacity-75 flex-col items-center justify-center rounded-lg hidden">
-                <h2 id="gameOverText" class="text-6xl game-font text-white mb-8 text-shadow-heavy"></h2>
-                <button id="restartButton" class="menu-button">Main Menu</button>
+<!-- NEW: Updated Game Over Modal -->
+            <div id="gameOverModal" class="absolute inset-0 flex-col items-center justify-center rounded-lg hidden">
+                <div id="gameOverBanner">
+                    <h2 id="gameOverText" class="game-font"></h2>
+                </div>
+                <div id="gameOverCrowns" class="flex gap-2">
+                    <!-- Crowns will be inserted here -->
+                </div>
+                <button id="restartButton">Main Menu</button>
             </div>
         </div>
 
@@ -579,7 +613,8 @@
 
         const gameDuration = 180; // 3 minutes
         let gameTimer = gameDuration;
-        let gameTime = 0; // <-- ADDED THIS MISSING VARIABLE
+        let gameTime = 0;
+        let lastTime = 0; // <-- NEW: Moved and initialized here
 
         let aiSpawnTimer = 0;
         const aiSpawnRate = 8; // seconds (Was 5, increased to 8 to reduce difficulty)
@@ -859,7 +894,9 @@
                     this.hp = 0;
                     this.isAlive = false;
                     if (this.isKing) {
-                        endGame(this.team === TEAM_AI ? TEAM_PLAYER : TEAM_AI);
+                        // NEW: Calculate result and pass to endGame
+                        const result = calculateGameResult(this.team); 
+                        endGame(result);
                     }
                 }
             }
@@ -981,15 +1018,25 @@
             }
 
             setPath(spawnX) {
-                const laneX = (spawnX < canvas.width / 2) ? LANE_LEFT_X : LANE_RIGHT_X;
-                const enemyBaseY = this.team === TEAM_PLAYER ? canvas.height * 0.15 : canvas.height * 0.85;
+                // NEW: Pathfinding logic
+                const laneX = (spawnX < BASE_CANVAS_WIDTH / 2) ? LANE_LEFT_X : LANE_RIGHT_X;
+                const enemyBaseY = (this.team === TEAM_PLAYER) ? BASE_CANVAS_HEIGHT * 0.15 : BASE_CANVAS_HEIGHT * 0.85;
                 
-                const bridgeY = this.team === TEAM_PLAYER ? BRIDGE_Y - TILE_SIZE : BRIDGE_Y + TILE_SIZE;
-                
-                this.path = [
-                    { x: laneX, y: bridgeY },
-                    { x: laneX, y: enemyBaseY } 
-                ];
+                if (this.movementType === 'ground') {
+                    const playerBridgeY = BRIDGE_Y + TILE_SIZE / 2 + 10;
+                    const aiBridgeY = BRIDGE_Y - TILE_SIZE / 2 - 10;
+                    const bridgeY = (this.team === TEAM_PLAYER) ? aiBridgeY : playerBridgeY;
+                    const startBridgeY = (this.team === TEAM_PLAYER) ? playerBridgeY : aiBridgeY;
+                    
+                    this.path = [
+                        { x: laneX, y: startBridgeY }, // Go to start of bridge
+                        { x: laneX, y: bridgeY }, // Go to end of bridge
+                        { x: laneX, y: enemyBaseY } // Go to enemy base
+                    ];
+                } else { // 'air'
+                    this.path = [{ x: laneX, y: enemyBaseY }]; // Fly straight
+                }
+                this.currentWaypoint = 0;
             }
 
             findTarget() {
@@ -1012,7 +1059,8 @@
                         continue;
                     }
 
-                    if (unit.isAlive && unit.team !== this.team && unit.targetType !== TARGET_BUILDING) { // Giants don't aggro
+                    // NEW: FIXED BUG HERE (removed unit.targetType !== TARGET_BUILDING)
+                    if (unit.isAlive && unit.team !== this.team) {
                         const dist = getDistance(this.x, this.y, unit.x, unit.y);
                         if (dist < closestDist) {
                             closestDist = dist;
@@ -1362,7 +1410,7 @@
             aiElixir = 5; // <-- Initialize AI elixir
             elixirTimer = 0;
             gameTimer = gameDuration;
-            gameTime = 0; // <-- INITIALIZED IT HERE
+            gameTime = 0;
             currentElixirRate = elixirRate;
             isDoubleElixir = false;
             aiSpawnTimer = 0;
@@ -1409,7 +1457,10 @@
             if (gameLoopId) {
                 cancelAnimationFrame(gameLoopId);
             }
-            gameLoop(0); // Start the loop
+            
+            // NEW: Reset lastTime and start game loop
+            lastTime = 0; 
+            gameLoopId = requestAnimationFrame(gameLoop); 
         }
 
         // --- NEW: Fixed createCardElement function ---
@@ -1657,7 +1708,8 @@
             }, 2000); // Show message for 2 seconds
         }
 
-        function handleTimeUp() {
+        // NEW: Function to determine winner and crowns
+        function calculateGameResult(kingDestroyedTeam = null) {
             let playerTowersDestroyed = 0;
             let aiTowersDestroyed = 0;
             let playerKingTower = null;
@@ -1672,47 +1724,88 @@
                     if (!t.isAlive && !t.isKing) aiTowersDestroyed++;
                 }
             });
-
-            if (playerTowersDestroyed > aiTowersDestroyed) {
-                endGame(TEAM_PLAYER);
-            } else if (aiTowersDestroyed > playerTowersDestroyed) {
-                endGame(TEAM_AI);
-            } else {
-                // Towers destroyed are equal, check King Tower HP
-                if (playerKingTower.hp > aiKingTower.hp) {
-                    endGame(TEAM_PLAYER);
-                } else if (aiKingTower.hp > playerKingTower.hp) {
-                    endGame(TEAM_AI);
-                } else {
-                    endGame('tie'); // It's a draw!
-                }
+            
+            // Check for 3-crown win
+            if (kingDestroyedTeam === TEAM_AI) { // Player wins
+                return { winner: TEAM_PLAYER, crowns: playerTowersDestroyed + 1 }; // +1 for king
             }
+            if (kingDestroyedTeam === TEAM_PLAYER) { // AI wins
+                return { winner: TEAM_AI, crowns: aiTowersDestroyed + 1 }; // +1 for king
+            }
+
+            // If time is up (no king destroyed)
+            if (playerTowersDestroyed > aiTowersDestroyed) {
+                return { winner: TEAM_PLAYER, crowns: playerTowersDestroyed };
+            }
+            if (aiTowersDestroyed > playerTowersDestroyed) {
+                return { winner: TEAM_AI, crowns: aiTowersDestroyed };
+            }
+            
+            // Towers destroyed are equal, check King Tower HP
+            if (playerKingTower.hp > aiKingTower.hp) {
+                return { winner: TEAM_PLAYER, crowns: playerTowersDestroyed }; // 0 or 1 crown
+            }
+            if (aiKingTower.hp > playerKingTower.hp) {
+                return { winner: TEAM_AI, crowns: aiTowersDestroyed }; // 0 or 1 crown
+            }
+            
+            return { winner: 'tie', crowns: 0 };
         }
 
-        function endGame(winner) {
+        function handleTimeUp() {
+            const result = calculateGameResult(); // No king was destroyed
+            endGame(result);
+        }
+
+        function endGame(result) {
             if (gameOver) return;
             gameOver = true;
             cancelAnimationFrame(gameLoopId);
 
-            if (winner === 'tie') {
+            const crownContainer = document.getElementById('gameOverCrowns');
+            const banner = document.getElementById('gameOverBanner');
+            crownContainer.innerHTML = ''; // Clear old crowns
+            
+            if (result.winner === 'tie') {
                 gameOverText.textContent = "Draw!";
-                gameOverText.style.color = "#f59e0b"; // Amber
+                banner.style.backgroundImage = 'linear-gradient(to bottom, #6b7280, #4b5563)'; // Grey
+                banner.style.borderColor = '#9ca3af';
             } else {
-                gameOverText.textContent = winner === TEAM_PLAYER ? "Victory!" : "Defeat!";
-                gameOverText.style.color = winner === TEAM_PLAYER ? "#facc15" : "#ef4444";
+                gameOverText.textContent = result.winner === TEAM_PLAYER ? "Victory!" : "Defeat!";
+                // Set banner color
+                if (result.winner === TEAM_PLAYER) {
+                    banner.style.backgroundImage = 'linear-gradient(to bottom, #4f8ff7, #3b82f6)'; // Blue
+                    banner.style.borderColor = '#bfdbfe';
+                } else {
+                    banner.style.backgroundImage = 'linear-gradient(to bottom, #f87171, #ef4444)'; // Red
+                    banner.style.borderColor = '#fecaca';
+                }
+                
+                // Add crowns
+                for (let i = 0; i < result.crowns; i++) {
+                    const crown = document.createElement('span');
+                    crown.textContent = '👑';
+                    crownContainer.appendChild(crown);
+                }
             }
             gameOverModal.classList.remove('hidden');
             gameOverModal.classList.add('flex');
         }
 
         // --- Main Game Loop ---
-        let lastTime = 0;
         function gameLoop(timestamp) {
             if (gameOver) return;
             gameLoopId = requestAnimationFrame(gameLoop);
+
+            // NEW: Handle timestamp initialization
+            if (lastTime === 0) {
+                lastTime = timestamp;
+                return; // Skip first frame to get valid deltaTime
+            }
+
             const deltaTime = (timestamp - lastTime) / 1000;
             lastTime = timestamp;
-            if (isNaN(deltaTime) || deltaTime > 0.5) return;
+            if (isNaN(deltaTime) || deltaTime <= 0 || deltaTime > 0.5) return; // More robust check
             
             gameTime += deltaTime;
             gameTimer -= deltaTime;
