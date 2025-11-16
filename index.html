@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clash-Style Arena Battle</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -656,7 +657,7 @@
                 type: 'unit',
                 emoji: '⚔️',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/knight.png',
-                stats: { hp: 600, speed: 60, range: 25, attackSpeed: 1, damage: 70, targetType: TARGET_GROUND, movementType: 'ground' }
+                stats: { hp: 600, speed: 60, range: 25, attackSpeed: 1, damage: 70, targetType: TARGET_GROUND, movementType: 'ground', spawnCount: 1 }
             },
             archer: {
                 id: 'archer',
@@ -665,7 +666,7 @@
                 type: 'unit',
                 emoji: '🏹',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/archers.png',
-                stats: { hp: 250, speed: 60, range: 120, attackSpeed: 0.8, damage: 40, targetType: TARGET_ANY, movementType: 'ground' }
+                stats: { hp: 250, speed: 60, range: 120, attackSpeed: 0.8, damage: 40, targetType: TARGET_ANY, movementType: 'ground', spawnCount: 2 }
             },
             giant: {
                 id: 'giant',
@@ -674,7 +675,7 @@
                 type: 'unit',
                 emoji: '🗿',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/giant.png',
-                stats: { hp: 1500, speed: 40, range: 25, attackSpeed: 1.5, damage: 100, targetType: TARGET_BUILDING, movementType: 'ground' }
+                stats: { hp: 1500, speed: 40, range: 25, attackSpeed: 1.5, damage: 100, targetType: TARGET_BUILDING, movementType: 'ground', spawnCount: 1 }
             },
             fireball: {
                 id: 'fireball',
@@ -692,7 +693,7 @@
                 type: 'unit',
                 emoji: '💀',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/skeletons.png',
-                stats: { hp: 50, speed: 80, range: 25, attackSpeed: 1, damage: 30, targetType: TARGET_GROUND, movementType: 'ground' }
+                stats: { hp: 50, speed: 80, range: 25, attackSpeed: 1, damage: 30, targetType: TARGET_GROUND, movementType: 'ground', spawnCount: 3 }
             },
             goblins: {
                 id: 'goblins',
@@ -701,7 +702,7 @@
                 type: 'unit',
                 emoji: '👺',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/goblins.png',
-                stats: { hp: 150, speed: 90, range: 25, attackSpeed: 1.1, damage: 50, targetType: TARGET_GROUND, movementType: 'ground' }
+                stats: { hp: 150, speed: 90, range: 25, attackSpeed: 1.1, damage: 50, targetType: TARGET_GROUND, movementType: 'ground', spawnCount: 3 }
             },
             musketeer: {
                 id: 'musketeer',
@@ -710,7 +711,7 @@
                 type: 'unit',
                 emoji: '🎯',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/musketeer.png',
-                stats: { hp: 500, speed: 60, range: 140, attackSpeed: 1.1, damage: 100, targetType: TARGET_ANY, movementType: 'ground' }
+                stats: { hp: 500, speed: 60, range: 140, attackSpeed: 1.1, damage: 100, targetType: TARGET_ANY, movementType: 'ground', spawnCount: 1 }
             },
             minipekka: {
                 id: 'minipekka',
@@ -719,7 +720,7 @@
                 type: 'unit',
                 emoji: '🤖',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/mini-pekka.png',
-                stats: { hp: 900, speed: 70, range: 25, attackSpeed: 1.8, damage: 300, targetType: TARGET_GROUND, movementType: 'ground' }
+                stats: { hp: 900, speed: 70, range: 25, attackSpeed: 1.8, damage: 300, targetType: TARGET_GROUND, movementType: 'ground', spawnCount: 1 }
             },
             babydragon: {
                 id: 'babydragon',
@@ -728,7 +729,7 @@
                 type: 'unit',
                 emoji: '🐲',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/baby-dragon.png',
-                stats: { hp: 800, speed: 60, range: 100, attackSpeed: 1.5, damage: 80, targetType: TARGET_ANY, movementType: 'air' } // This is now an AIR unit
+                stats: { hp: 800, speed: 60, range: 100, attackSpeed: 1.5, damage: 80, targetType: TARGET_ANY, movementType: 'air', spawnCount: 1 } // This is now an AIR unit
             },
             goblinHut: {
                 id: 'goblinHut',
@@ -746,7 +747,7 @@
                 type: 'unit',
                 emoji: '🐗',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/hog-rider.png',
-                stats: { hp: 800, speed: 100, range: 25, attackSpeed: 1.5, damage: 150, targetType: TARGET_BUILDING, movementType: 'ground' }
+                stats: { hp: 800, speed: 100, range: 25, attackSpeed: 1.5, damage: 150, targetType: TARGET_BUILDING, movementType: 'ground', spawnCount: 1 }
             },
             arrows: {
                 id: 'arrows',
@@ -764,7 +765,7 @@
                 type: 'unit',
                 emoji: '💃',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/valkyrie.png',
-                stats: { hp: 800, speed: 60, range: 25, attackSpeed: 1.5, damage: 120, targetType: TARGET_GROUND, movementType: 'ground', splashRadius: 40 }
+                stats: { hp: 800, speed: 60, range: 25, attackSpeed: 1.5, damage: 120, targetType: TARGET_GROUND, movementType: 'ground', splashRadius: 40, spawnCount: 1 }
             },
             // --- NEW CARDS ---
             pekka: {
@@ -774,7 +775,7 @@
                 type: 'unit',
                 emoji: '🦾',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/pekka.png',
-                stats: { hp: 2000, speed: 40, range: 25, attackSpeed: 1.8, damage: 500, targetType: TARGET_GROUND, movementType: 'ground' }
+                stats: { hp: 2000, speed: 40, range: 25, attackSpeed: 1.8, damage: 500, targetType: TARGET_GROUND, movementType: 'ground', spawnCount: 1 }
             },
             wizard: {
                 id: 'wizard',
@@ -783,7 +784,7 @@
                 type: 'unit',
                 emoji: '🧙',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/wizard.png',
-                stats: { hp: 450, speed: 60, range: 130, attackSpeed: 1.4, damage: 130, targetType: TARGET_ANY, movementType: 'ground', splashRadius: 30 }
+                stats: { hp: 450, speed: 60, range: 130, attackSpeed: 1.4, damage: 130, targetType: TARGET_ANY, movementType: 'ground', splashRadius: 30, spawnCount: 1 }
             },
             minions: {
                 id: 'minions',
@@ -792,7 +793,7 @@
                 type: 'unit',
                 emoji: '🦇',
                 imageUrl: 'https://cdn.royaleapi.com/static/img/cards-150/minions.png',
-                stats: { hp: 150, speed: 80, range: 100, attackSpeed: 1, damage: 50, targetType: TARGET_ANY, movementType: 'air' }
+                stats: { hp: 150, speed: 80, range: 100, attackSpeed: 1, damage: 50, targetType: TARGET_ANY, movementType: 'air', spawnCount: 3 }
             },
             zap: {
                 id: 'zap',
@@ -1299,7 +1300,7 @@
                 if (card) {
                     // Spawn unit slightly in front of the hut
                     const spawnY = this.team === TEAM_PLAYER ? this.y - 10 : this.y + 10;
-                    units.push(new Unit(this.x, spawnY, this.team, card.stats, card.emoji));
+                    spawnUnits(this.x, spawnY, this.team, card); // Use new spawn function
                 }
             }
 
@@ -1637,9 +1638,22 @@
                     const laneX = Math.random() < 0.5 ? LANE_LEFT_X : LANE_RIGHT_X;
                     const spawnY = 50;
                     
-                    units.push(new Unit(laneX, spawnY, TEAM_AI, card.stats, card.emoji));
+                    spawnUnits(laneX, spawnY, TEAM_AI, card); // Use new spawn function
                 }
                 // If not enough elixir, the AI just waits for its next attempt
+            }
+        }
+
+        // NEW: Function to spawn single or multiple units
+        function spawnUnits(x, y, team, card) {
+            const stats = card.stats;
+            const spawnCount = stats.spawnCount || 1;
+            
+            for (let i = 0; i < spawnCount; i++) {
+                // Add a slight random offset for cluster spawning
+                const spawnX = x + (Math.random() - 0.5) * 20;
+                const spawnY = y + (Math.random() - 0.5) * 20;
+                units.push(new Unit(spawnX, spawnY, team, stats, card.emoji));
             }
         }
 
@@ -1666,7 +1680,7 @@
                     return;
                 }
                 elixir -= card.cost;
-                units.push(new Unit(x, y, TEAM_PLAYER, card.stats, card.emoji));
+                spawnUnits(x, y, TEAM_PLAYER, card); // Use new spawn function
             } 
             else if (card.type === 'spell') {
                 elixir -= card.cost;
@@ -1727,10 +1741,10 @@
             
             // Check for 3-crown win
             if (kingDestroyedTeam === TEAM_AI) { // Player wins
-                return { winner: TEAM_PLAYER, crowns: playerTowersDestroyed + 1 }; // +1 for king
+                return { winner: TEAM_PLAYER, crowns: 3 }; // Always 3 crowns on King kill
             }
             if (kingDestroyedTeam === TEAM_PLAYER) { // AI wins
-                return { winner: TEAM_AI, crowns: aiTowersDestroyed + 1 }; // +1 for king
+                return { winner: TEAM_AI, crowns: 3 }; // Always 3 crowns on King kill
             }
 
             // If time is up (no king destroyed)
